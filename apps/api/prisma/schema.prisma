@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_DATABASE_URL")
+}
+
+enum RolUsuario {
+  ADMIN
+  OPERADOR
+}
+
+enum EstadoEspacio {
+  LIBRE
+  OCUPADO
+  INACTIVO
+}
+
+enum EstadoRegistro {
+  ACTIVO
+  CERRADO
+  ANULADO
+}
+
+model Usuario {
+  id           String             @id @default(cuid())
+  nombre       String
+  email        String             @unique
+  passwordHash String
+  rol          RolUsuario
+  activo       Boolean            @default(true)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  registros    RegistroParqueo[]
+}
+
+model Vehiculo {
+  id          String             @id @default(cuid())
+  placa       String             @unique
+  marca       String?
+  color       String?
+  tipo        String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  registros   RegistroParqueo[]
+}
+
+model EspacioParqueo {
+  id          String             @id @default(cuid())
+  codigo      String             @unique
+  estado      EstadoEspacio      @default(LIBRE)
+  tipo        String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  registros   RegistroParqueo[]
+}
+
+model Tarifa {
+  id                 String             @id @default(cuid())
+  nombre             String
+  valorHora          Decimal            @db.Decimal(10, 2)
+  valorFraccion      Decimal?           @db.Decimal(10, 2)
+  fraccionHabilitada Boolean            @default(false)
+  activa             Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  registros          RegistroParqueo[]
+}
+
+model RegistroParqueo {
+  id             String          @id @default(cuid())
+  vehiculoId     String
+  espacioId      String
+  tarifaId       String
+  usuarioId      String
+  horaEntrada    DateTime
+  horaSalida     DateTime?
+  tiempoTotalMin Int?
+  montoTotal     Decimal?        @db.Decimal(10, 2)
+  estado         EstadoRegistro  @default(ACTIVO)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  vehiculo       Vehiculo        @relation(fields: [vehiculoId], references: [id])
+  espacio        EspacioParqueo  @relation(fields: [espacioId], references: [id])
+  tarifa         Tarifa          @relation(fields: [tarifaId], references: [id])
+  usuario        Usuario         @relation(fields: [usuarioId], references: [id])
+  pago           Pago?
+}
+
+model Pago {
+  id          String           @id @default(cuid())
+  registroId  String           @unique
+  monto       Decimal          @db.Decimal(10, 2)
+  metodo      String
+  estado      String
+  fechaPago   DateTime         @default(now())
+  createdAt   DateTime         @default(now())
+  registro    RegistroParqueo  @relation(fields: [registroId], references: [id])
+}
